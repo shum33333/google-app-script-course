@@ -108,3 +108,15 @@ SessionXX_主題名稱/
 | 平台 | Google Workspace（免費帳號即可） |
 | 程式語言 | JavaScript（Apps Script 環境） |
 | 課程時數 | 30 小時（10 堂 × 3 小時） |
+
+####
+懶人包：如果你想以後都省事
+你可以把「設定、抓取、推送」全部串在一起執行一次，確保環境變數都對了：
+
+第一步:
+git clone https://github.com/你的帳號/專案名稱.git
+
+第二步:
+git remote add upstream https://github.com/roapple10/google-app-script-course.git; git pull upstream main -X ours; git add .; git commit -m "Sync and update"; git push origin main
+
+小提醒：如果你的 main 分支在原作者那邊其實叫做 master，請記得把指令最後的 main 改成 master。目前的專案大多已改為 main。
