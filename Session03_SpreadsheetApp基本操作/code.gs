@@ -188,6 +188,43 @@ function 自動建立月報表() {
   }
 }
 
+/**
+ * 備份員工資料工作表
+ * 說明：將「員工資料」工作表複製一份，命名為 「員工資料_備份_日期」
+ */
+function 備份員工資料() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("員工資料");
+  
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("❌ 找不到「員工資料」工作表，無法備份。");
+    return;
+  }
+  
+  // 取得格式化日期 (yyyyMMdd)
+  var 今天 = new Date();
+  var 日期字串 = Utilities.formatDate(今天, "Asia/Taipei", "yyyyMMdd");
+  var 備份名稱 = "員工資料_備份_" + 日期字串;
+  
+  // 檢查是否已存在同名的備份
+  var 既有備份 = ss.getSheetByName(備份名稱);
+  if (既有備份) {
+    // 如果已存在，加上時間戳記
+    備份名稱 += "_" + Utilities.formatDate(今天, "Asia/Taipei", "HHmmss");
+  }
+  
+  // 複製工作表
+  var 備份工作表 = sheet.copyTo(ss);
+  備份工作表.setName(備份名稱);
+  
+  // 將備份工作表移到最後（可選）
+  ss.setActiveSheet(備份工作表);
+  ss.moveActiveSheet(ss.getSheets().length);
+  
+  Logger.log("✅ 員工資料備份完成：" + 備份名稱);
+  SpreadsheetApp.getUi().alert("✅ 員工資料備份完成！\n新工作表名稱：" + 備份名稱);
+}
+
 // ============================================================
 // 第三部分：讀寫儲存格
 // ============================================================
@@ -466,6 +503,7 @@ function onOpen() {
     .addItem("📝 讀寫儲存格示範", "讀寫儲存格示範")
     .addSeparator()
     .addItem("📅 建立當月報表", "自動建立月報表")
+    .addItem("💾 備份員工資料", "備份員工資料")
     .addItem("⏰ 設定每日觸發器", "設定每日觸發器")
     .addItem("🗑️ 刪除所有觸發器", "刪除所有觸發器")
     .addToUi();
