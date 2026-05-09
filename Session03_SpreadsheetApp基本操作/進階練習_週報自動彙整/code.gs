@@ -273,9 +273,98 @@ function 新增週報範例資料() {
   });
 
   if (有更新) {
-    SpreadsheetApp.getUi().alert("✅ 已成功為各部門（業務、行銷、研發、人資、財務）填入「專屬」範例資料！\n現在您可以點選「彙整所有週報」來測試彙整功能。");
+    SpreadsheetApp.getUi().alert("✅ 已成功為各部門（業務、行銷、研發、人資、財務）填入「專屬」範例資料！\n現在您可以點選「彙整所有週報」來測試彙整功能. ");
   } else {
     SpreadsheetApp.getUi().alert("⚠️ 找不到週報工作表，請先執行「建立本週週報」。");
+  }
+}
+
+/**
+ * 建立週報完成率統計圖表
+ */
+function 建立完成率圖表() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = ss.getSheets();
+    var 統計表 = ss.getSheetByName("週報統計");
+    
+    // 若已存在則清空，否則建立新表
+    if (統計表) {
+      統計表.clear();
+      // 刪除舊圖表
+      var charts = 統計表.getCharts();
+      charts.forEach(function(c) { 統計表.removeChart(c); });
+    } else {
+      統計表 = ss.insertSheet("週報統計");
+    }
+
+    var 已填寫 = 0;
+    var 未填寫 = 0;
+    var 部門數量 = 0;
+    
+    var 詳細資料 = [["部門名稱", "填寫狀態"]];
+
+    sheets.forEach(function(sheet) {
+      var name = sheet.getName();
+      if (name.indexOf("週報_") !== 0) return;
+
+      部門數量++;
+      var 部門名 = name.replace("週報_", "").split("_")[0];
+      
+      // 判定邏輯：第一個工作項目有值且填報人非空
+      var 第一個項目 = sheet.getRange(7, 2).getValue();
+      var 填報人 = sheet.getRange("A3").getValue().replace("填報人：", "").trim();
+
+      if (第一個項目 && 第一個項目.trim() !== "" && 填報人 !== "") {
+        已填寫++;
+        詳細資料.push([部門名, "✅ 已完成"]);
+      } else {
+        未填寫++;
+        詳細資料.push([部門名, "❌ 未完成"]);
+      }
+    });
+
+    if (部門數量 === 0) {
+      SpreadsheetApp.getUi().alert("⚠️ 找不到任何週報工作表，請先執行「建立本週週報」。");
+      return;
+    }
+
+    // 1. 寫入圖表用的數據範圍
+    統計表.getRange("A1:B1").setValues([["狀態", "部門數"]]);
+    統計表.getRange("A2:B3").setValues([
+      ["已完成", 已填寫],
+      ["未完成", 未填寫]
+    ]);
+
+    // 2. 建立圓餅圖
+    var chart = 統計表.newChart()
+      .setChartType(Charts.ChartType.PIE)
+      .addRange(統計表.getRange("A1:B3"))
+      .setPosition(1, 4, 0, 0)
+      .setOption('title', '週報填寫完成率 (' + 已填寫 + '/' + 部門數量 + ')')
+      .setOption('pieHole', 0.4) // 空心圓餅圖
+      .setOption('colors', ['#34a853', '#ea4335']) // 綠色代表完成，紅色代表未完成
+      .setOption('legend', {position: 'right', textStyle: {fontSize: 12}})
+      .build();
+
+    統計表.insertChart(chart);
+
+    // 3. 寫入下方詳細清單供對照
+    統計表.getRange(1, 1, 3, 2).setBackground("#f3f3f3").setBorder(true, true, true, true, true, true);
+    統計表.getRange(5, 1, 詳細資料.length, 2).setValues(詳細資料);
+    統計表.getRange(5, 1, 1, 2).setBackground("#1565c0").setFontColor("#fff").setFontWeight("bold");
+    
+    // 自動調整欄寬
+    統計表.autoResizeColumns(1, 2);
+    
+    // 切換到統計分頁
+    ss.setActiveSheet(統計表);
+    
+    SpreadsheetApp.getUi().alert("📊 完成率統計圖表已建立！\n目前完成度：" + Math.round((已填寫/部門數量)*100) + "%");
+
+  } catch (錯誤) {
+    Logger.log("❌ 建立圖表失敗：" + 錯誤.message);
+    SpreadsheetApp.getUi().alert("❌ 錯誤：" + 錯誤.message);
   }
 }
 
@@ -285,6 +374,8 @@ function onOpen() {
     .addItem("📋 建立本週週報", "建立本週週報")
     .addItem("📝 新增週報範例資料", "新增週報範例資料")
     .addItem("📊 彙整所有週報", "彙整週報")
+    .addItem("📈 週報完成率統計", "建立完成率圖表")
+    .addItem("📧 提醒未填寫部門", "提醒未填寫部門")
     .addSeparator()
     .addItem("⏰ 設定週一自動建立", "設定週一自動建立")
     .addItem("⏰ 設定週五自動彙整", "設定週五自動彙整")
