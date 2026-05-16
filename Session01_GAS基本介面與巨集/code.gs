@@ -98,22 +98,34 @@ function 流程控制示範() {
 
   if (!sheet) {
     Logger.log("❌ 找不到「成績單」工作表，請先建立範例資料");
+    SpreadsheetApp.getUi().alert("❌ 找不到「成績單」工作表，請先執行「初始化範例資料」");
     return;
   }
 
-  // 取得所有資料（從第 2 列開始，跳過標題）
+  // 取得所有資料
   var 資料範圍 = sheet.getDataRange();
   var 所有資料 = 資料範圍.getValues();
+  var 總列數 = 所有資料.length;
 
-  Logger.log("===== 成績評等結果 =====");
+  if (總列數 <= 1) {
+    SpreadsheetApp.getUi().alert("❌ 沒有學生資料可以計算！");
+    return;
+  }
+
+  Logger.log("===== 開始計算成績評等 =====");
+
+  // 準備存放結果的陣列
+  var 結果陣列 = [];
 
   // 從第 1 列開始（索引 1），跳過標題列（索引 0）
-  for (var i = 1; i < 所有資料.length; i++) {
+  for (var i = 1; i < 總列數; i++) {
     var 學生姓名 = 所有資料[i][0];
     var 國文 = 所有資料[i][1];
     var 英文 = 所有資料[i][2];
     var 數學 = 所有資料[i][3];
-    var 平均 = (國文 + 英文 + 數學) / 3;
+    
+    // 計算平均（保留到小數點第一位）
+    var 平均 = Number(((國文 + 英文 + 數學) / 3).toFixed(1));
 
     // if-else 判斷等第
     var 等第;
@@ -129,8 +141,30 @@ function 流程控制示範() {
       等第 = "不及格 ⚠️";
     }
 
-    Logger.log(學生姓名 + " — 平均：" + 平均.toFixed(1) + " — 等第：" + 等第);
+    // 將結果放入陣列
+    結果陣列.push([平均, 等第]);
+    Logger.log(學生姓名 + " — 平均：" + 平均 + " — 等第：" + 等第);
   }
+
+  // --- 寫回試算表 ---
+  
+  // 設定標題（第 1 列，第 7-8 欄）
+  sheet.getRange(1, 7, 1, 2).setValues([["平均", "成績等第"]]);
+  sheet.getRange(1, 7, 1, 2)
+    .setBackground("#fbbc04") // 琥珀色
+    .setFontColor("#000")
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center");
+
+  // 寫入數據（從第 2 列，第 7 欄開始）
+  var 寫入範圍 = sheet.getRange(2, 7, 結果陣列.length, 2);
+  寫入範圍.setValues(結果陣列);
+  
+  // 設定格式：置中對齊
+  寫入範圍.setHorizontalAlignment("center");
+
+  Logger.log("✅ 成績計算完成並已寫入試算表！");
+  SpreadsheetApp.getUi().alert("✅ 成績計算完成！\n平均與等第已填入 G 欄與 H 欄。");
 }
 
 // ============================================================
