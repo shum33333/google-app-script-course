@@ -378,12 +378,34 @@ function 找出前十大客戶() {
     // 4. 取前 10 名
     var 前十大 = 排序陣列.slice(0, 10);
 
-    // 5. 格式化輸出訊息
-    var 訊息 = "🏆 消費金額前 10 名客戶：\n\n";
+    // 5. 寫入新工作表
+    var 輸出表名 = "客戶消費排行";
+    var 輸出表 = ss.getSheetByName(輸出表名);
+    if (輸出表) {
+      輸出表.clear();
+    } else {
+      輸出表 = ss.insertSheet(輸出表名);
+    }
+
+    // 寫入標題與資料
+    var 輸出資料 = [["排名", "客戶名稱", "總消費金額"]];
     前十大.forEach(function(item, index) {
-      訊息 += (index + 1) + ". " + item.名稱 + "：$" + item.總額.toLocaleString() + "\n";
+      輸出資料.push([index + 1, item.名稱, item.總額]);
     });
 
+    輸出表.getRange(1, 1, 輸出資料.length, 3).setValues(輸出資料);
+
+    // 6. 格式化
+    // 標題列
+    輸出表.getRange(1, 1, 1, 3).setBackground("#1565c0").setFontColor("#fff").setFontWeight("bold");
+    // 金額格式
+    輸出表.getRange(2, 3, 前十大.length, 1).setNumberFormat("#,##0");
+    // 自動調整欄寬
+    輸出表.autoResizeColumn(1);
+    輸出表.autoResizeColumn(2);
+    輸出表.autoResizeColumn(3);
+
+    var 訊息 = "✅ 已將前 10 名客戶消費排行存入「" + 輸出表名 + "」工作表。";
     Logger.log(訊息);
     SpreadsheetApp.getUi().alert(訊息);
 
