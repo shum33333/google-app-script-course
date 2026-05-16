@@ -88,8 +88,9 @@ function 供應商評比() {
  * 採購需求預測（根據歷史消耗趨勢）
  */
 function 採購預測() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("採購紀錄");
-  if (!sheet) return;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("採購紀錄");
+  if (!sheet) { SpreadsheetApp.getUi().alert("❌ 找不到 '採購紀錄' 工作表"); return; }
 
   var 資料 = sheet.getDataRange().getValues();
   var 品項統計 = {};
@@ -101,16 +102,33 @@ function 採購預測() {
     品項統計[品項].push(數量);
   }
 
-  var 預測 = [];
+  var 預測資料 = [];
   for (var name in 品項統計) {
     var 歷史 = 品項統計[name];
     var 平均 = 歷史.reduce(function(a, b) { return a + b; }, 0) / 歷史.length;
     var 建議量 = Math.ceil(平均 * 1.2); // 多 20% 安全庫存
 
-    預測.push(name + "：月均 " + Math.round(平均) + " → 建議採購 " + 建議量);
+    預測資料.push([name, Math.round(平均), 建議量]);
   }
 
-  SpreadsheetApp.getUi().alert("📊 採購預測\n\n" + 預測.join("\n"));
+  // 產生預測報表
+  var 預測表 = ss.getSheetByName("採購預測");
+  if (預測表) 預測表.clear(); else 預測表 = ss.insertSheet("採購預測");
+
+  預測表.getRange("A1").setValue("📊 採購需求預測").setFontSize(16).setFontWeight("bold");
+  預測表.getRange("A2").setValue("預測日期：" + Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd"));
+
+  var 表頭 = [["品項", "月均消耗", "建議採購量"]];
+  預測表.getRange(4, 1, 1, 3).setValues(表頭);
+  預測表.getRange(4, 1, 1, 3).setBackground("#2e7d32").setFontColor("#fff").setFontWeight("bold");
+
+  if (預測資料.length > 0) {
+    預測表.getRange(5, 1, 預測資料.length, 3).setValues(預測資料);
+  }
+
+  for (var c = 1; c <= 3; c++) 預測表.autoResizeColumn(c);
+
+  SpreadsheetApp.getUi().alert("✅ 採購預測已產生於 '採購預測' 工作表！");
 }
 
 function 初始化採購資料() {
