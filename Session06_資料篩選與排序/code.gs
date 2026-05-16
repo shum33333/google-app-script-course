@@ -325,6 +325,73 @@ function 匯出篩選結果() {
   }
 }
 
+/**
+ * 找出消費金額最高的前 10 名客戶
+ */
+function 找出前十大客戶() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("銷售紀錄");
+    if (!sheet) {
+      SpreadsheetApp.getUi().alert("❌ 請先執行「初始化銷售資料」");
+      return;
+    }
+
+    var 資料 = sheet.getDataRange().getValues();
+    var 標題 = 資料[0];
+    
+    // 找出「客戶」與「金額」的索引
+    var 客戶索引 = 標題.indexOf("客戶");
+    var 金額索引 = 標題.indexOf("金額");
+
+    if (客戶索引 === -1 || 金額索引 === -1) {
+      SpreadsheetApp.getUi().alert("❌ 找不到「客戶」或「金額」欄位");
+      return;
+    }
+
+    // 1. 彙整各客戶的總消費金額
+    var 客戶統計 = {};
+    for (var i = 1; i < 資料.length; i++) {
+      var 客戶名 = 資料[i][客戶索引];
+      var 金額 = 資料[i][金額索引];
+      
+      if (!客戶統計[客戶名]) {
+        客戶統計[客戶名] = 0;
+      }
+      客戶統計[客戶名] += 金額;
+    }
+
+    // 2. 將物件轉為陣列以利排序
+    var 排序陣列 = [];
+    for (var 名稱 in 客戶統計) {
+      排序陣列.push({
+        名稱: 名稱,
+        總額: 客戶統計[名稱]
+      });
+    }
+
+    // 3. 依金額降冪排序
+    排序陣列.sort(function(a, b) {
+      return b.總額 - a.總額;
+    });
+
+    // 4. 取前 10 名
+    var 前十大 = 排序陣列.slice(0, 10);
+
+    // 5. 格式化輸出訊息
+    var 訊息 = "🏆 消費金額前 10 名客戶：\n\n";
+    前十大.forEach(function(item, index) {
+      訊息 += (index + 1) + ". " + item.名稱 + "：$" + item.總額.toLocaleString() + "\n";
+    });
+
+    Logger.log(訊息);
+    SpreadsheetApp.getUi().alert(訊息);
+
+  } catch (錯誤) {
+    Logger.log("❌ 錯誤：" + 錯誤.message);
+  }
+}
+
 // ============================================================
 // 初始化範例資料
 // ============================================================
@@ -376,6 +443,7 @@ function onOpen() {
     .addItem("📶 排序示範", "排序示範")
     .addSeparator()
     .addItem("📊 生成銷售摘要", "生成銷售摘要")
+    .addItem("🏆 找出前十大客戶", "找出前十大客戶")
     .addItem("🧹 自動資料清理", "自動資料清理")
     .addItem("📤 匯出篩選結果", "匯出篩選結果")
     .addToUi();
