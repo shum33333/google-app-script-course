@@ -136,12 +136,13 @@ function 生成報價單() {
     sheet.getRange(備註列, 1).setValue("");
     sheet.getRange(備註列 + 1, 1).setValue("");
 
-    // 進行第 1 至 6 欄的自適應寬度調整與防護限制
+   // 進行第 1 至 6 欄的自適應寬度調整與防護限制
     for (var c = 1; c <= 6; c++) {
       sheet.autoResizeColumn(c);
       var width = sheet.getColumnWidth(c);
+      
       // 依欄位屬性給予合理的最低寬度限制
-      if (c === 1 && width < 50) sheet.setColumnWidth(c, 50);         // 項次
+      if (c === 1 && width < 100) sheet.setColumnWidth(c, 100);       // ✅ 修改這裡：將 A 欄下限改為 100，確保「報價編號」能完整顯示
       else if (c === 2 && width < 200) sheet.setColumnWidth(c, 200);  // 品名/規格
       else if (c === 3 && width < 60) sheet.setColumnWidth(c, 60);    // 單位
       else if (c === 4 && width < 80) sheet.setColumnWidth(c, 80);    // 數量
