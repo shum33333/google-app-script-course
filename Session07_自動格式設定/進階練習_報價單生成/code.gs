@@ -13,9 +13,20 @@ function 生成報價單() {
     if (!客戶表) { SpreadsheetApp.getUi().alert("❌ 請先初始化"); return; }
 
     var ui = SpreadsheetApp.getUi();
+    
+    // 1. 提示輸入客戶名稱
     var 客戶回應 = ui.prompt("📝 報價單", "請輸入客戶名稱：", ui.ButtonSet.OK_CANCEL);
     if (客戶回應.getSelectedButton() !== ui.Button.OK) return;
     var 客戶 = 客戶回應.getResponseText().trim() || "範例客戶";
+
+    // 2. 提示輸入客戶 Email
+    var Email回應 = ui.prompt("📧 客戶電子信箱", "請輸入收件人 Email 位址：", ui.ButtonSet.OK_CANCEL);
+    if (Email回應.getSelectedButton() !== ui.Button.OK) return;
+    var 客戶Email = Email回應.getResponseText().trim();
+    if (!客戶Email || 客戶Email.indexOf("@") === -1) {
+      ui.alert("❌ 請輸入有效的 Email 位址！已取消生成報價單。");
+      return;
+    }
 
     var 編號 = "QT-" + Utilities.formatDate(new Date(), "Asia/Taipei", "yyyyMMdd") + "-" +
                String(Math.floor(Math.random() * 100)).padStart(3, "0");
@@ -109,14 +120,41 @@ function 生成報價單() {
     sheet.getRange(備註列 + 1, 1).setValue(
       "1. 報價有效期限 30 天\n2. 付款條件：月結 30 天\n3. 交貨期：訂購後 7~14 個工作天\n4. 以上報價含安裝及教育訓練"
     ).setWrap(true).setFontColor("#555");
+    sheet.setRowHeight(備註列 + 1, 80); // 調整備註高度以容納多行文字
 
-    // 欄寬
-    sheet.setColumnWidth(1, 50);
-    sheet.setColumnWidth(2, 250);
-    sheet.setColumnWidth(3, 60);
-    sheet.setColumnWidth(4, 80);
-    sheet.setColumnWidth(5, 100);
-    sheet.setColumnWidth(6, 120);
+    // 欄寬自適應調整
+    // 暫時將 A 欄中會影響寬度計算的合併儲存格長文字清空，避免欄 1 (項次) 被異常拉寬
+    var tempA1 = sheet.getRange("A1").getValue();
+    var tempA2 = sheet.getRange("A2").getValue();
+    var tempA4 = sheet.getRange("A4").getValue();
+    var tempRemark1 = sheet.getRange(備註列, 1).getValue();
+    var tempRemark2 = sheet.getRange(備註列 + 1, 1).getValue();
+
+    sheet.getRange("A1").setValue("");
+    sheet.getRange("A2").setValue("");
+    sheet.getRange("A4").setValue("");
+    sheet.getRange(備註列, 1).setValue("");
+    sheet.getRange(備註列 + 1, 1).setValue("");
+
+    // 進行第 1 至 6 欄的自適應寬度調整與防護限制
+    for (var c = 1; c <= 6; c++) {
+      sheet.autoResizeColumn(c);
+      var width = sheet.getColumnWidth(c);
+      // 依欄位屬性給予合理的最低寬度限制
+      if (c === 1 && width < 50) sheet.setColumnWidth(c, 50);         // 項次
+      else if (c === 2 && width < 200) sheet.setColumnWidth(c, 200);  // 品名/規格
+      else if (c === 3 && width < 60) sheet.setColumnWidth(c, 60);    // 單位
+      else if (c === 4 && width < 80) sheet.setColumnWidth(c, 80);    // 數量
+      else if (c === 5 && width < 100) sheet.setColumnWidth(c, 100);  // 單價
+      else if (c === 6 && width < 120) sheet.setColumnWidth(c, 120);  // 金額
+    }
+
+    // 還原 A 欄長文字
+    sheet.getRange("A1").setValue(tempA1);
+    sheet.getRange("A2").setValue(tempA2);
+    sheet.getRange("A4").setValue(tempA4);
+    sheet.getRange(備註列, 1).setValue(tempRemark1);
+    sheet.getRange(備註列 + 1, 1).setValue(tempRemark2);
 
     // 整體框線
     sheet.getRange(11, 1, 品項資料.length + 3, 6)
@@ -124,7 +162,64 @@ function 生成報價單() {
 
     sheet.setFrozenRows(0);
 
-    SpreadsheetApp.getUi().alert("✅ 報價單 " + 編號 + " 已生成！\n總金額：NT$ " + 總計.toLocaleString());
+    // ===== 匯出 PDF 並寄送 Email =====
+    
+    // 強制將所有未儲存的變更寫入工作表，以利匯出正確資料的 PDF
+    SpreadsheetApp.flush();
+
+    var ssId = ss.getId();
+    var sheetId = sheet.getSheetId();
+
+    // 建構 PDF 匯出 URL 與參數
+    var url = ss.getUrl().replace(/edit$/, '') + 'export?';
+    var exportOptions = {
+      exportFormat: 'pdf',
+      format: 'pdf',
+      size: 'A4',             // A4 紙張
+      portrait: 'true',       // 直向
+      fitw: 'true',           // 符合寬度 (一頁寬)
+      gridlines: 'false',     // 隱藏格線
+      printtitle: 'false',    // 不重複列印標題
+      sheetnames: 'false',    // 不重複列印工作表名稱
+      fzr: 'false',           // 不重複列印凍結列
+      gid: sheetId            // 指定只匯出該報價單
+    };
+
+    var urlParts = [];
+    for (var key in exportOptions) {
+      urlParts.push(key + '=' + encodeURIComponent(exportOptions[key]));
+    }
+    var exportUrl = url + urlParts.join('&');
+
+    var response = UrlFetchApp.fetch(exportUrl, {
+      headers: {
+        'Authorization': 'Bearer ' + ScriptApp.getOAuthToken()
+      },
+      muteHttpExceptions: true
+    });
+
+    if (response.getResponseCode() !== 200) {
+      throw new Error("PDF 轉換失敗，HTTP 狀態碼：" + response.getResponseCode());
+    }
+
+    var blob = response.getBlob().setName(編號 + "_" + 客戶 + ".pdf");
+
+    // 發送電子郵件並附加 PDF
+    var 主旨 = "【ABC 科技】您的報價單已生成 - 編號：" + 編號;
+    var 信件內文 = "親愛的 " + 客戶 + " 您好：\n\n" +
+               "感謝您的諮詢！附件為為您量身打造的報價單（編號：" + 編號 + "），請查收。\n" +
+               "如有任何問題，歡迎隨時回信與我們聯繫。\n\n" +
+               "祝 順心\n" +
+               "ABC 科技團隊 敬上";
+
+    MailApp.sendEmail({
+      to: 客戶Email,
+      subject: 主旨,
+      body: 信件內文,
+      attachments: [blob]
+    });
+
+    SpreadsheetApp.getUi().alert("✅ 報價單 " + 編號 + " 已生成，且已轉成 PDF 並寄信至 " + 客戶Email + "！\n總金額：NT$ " + 總計.toLocaleString());
 
   } catch (錯誤) { Logger.log("❌ " + 錯誤.message); SpreadsheetApp.getUi().alert("❌ " + 錯誤.message); }
 }
