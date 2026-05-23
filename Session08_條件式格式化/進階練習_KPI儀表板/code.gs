@@ -101,8 +101,24 @@ function 建立KPI儀表板() {
 
     sheet.setConditionalFormatRules(rules);
 
-    // 欄寬與凍結
-    for (var c = 1; c <= 8; c++) sheet.autoResizeColumn(c);
+    // 暫時備份第 1 到 5 列的內容，避免合併儲存格影響自動寬度計算
+    var tempValues = sheet.getRange(1, 1, 5, 8).getValues();
+    sheet.getRange(1, 1, 5, 8).clearContent();
+
+    // 欄寬自適應調整
+    for (var c = 1; c <= 8; c++) {
+      sheet.autoResizeColumn(c);
+      var width = sheet.getColumnWidth(c);
+      // 設定各欄合理最低寬度，以保證美觀 (部門, 員工, 營收目標, 實際營收, 達成率, 客戶滿意度, 績效分數, 狀態)
+      var minWidths = [100, 100, 110, 110, 100, 110, 100, 100];
+      if (width < minWidths[c - 1]) {
+        sheet.setColumnWidth(c, minWidths[c - 1]);
+      }
+    }
+
+    // 還原備份的內容
+    sheet.getRange(1, 1, 5, 8).setValues(tempValues);
+
     sheet.setFrozenRows(8);
 
     SpreadsheetApp.getUi().alert("✅ KPI 儀表板已建立！");
