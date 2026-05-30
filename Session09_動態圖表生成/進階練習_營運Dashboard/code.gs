@@ -38,8 +38,9 @@ function 建立營運Dashboard() {
       .setOption("curveType", "function")
       .setOption("pointSize", 5).setOption("lineWidth", 3)
       .setOption("colors", ["#1a73e8", "#ea4335", "#34a853"])
-      .setOption("legend", { position: "bottom" })
-      .setOption("vAxis", { format: "#,##0" })
+      .setOption("legend", { position: "bottom", textStyle: { fontSize: 10 } })
+      .setOption("hAxis", { title: "月份", titleTextStyle: { fontSize: 11, bold: true } })
+      .setOption("vAxis", { title: "金額 (元)", titleTextStyle: { fontSize: 11, bold: true }, format: "#,##0" })
       .build();
     sheet.insertChart(折線圖);
 
@@ -55,7 +56,13 @@ function 建立營運Dashboard() {
         .setOption("titleTextStyle", { fontSize: 14, bold: true })
         .setOption("width", 500).setOption("height", 350)
         .setOption("colors", ["#90caf9", "#1565c0"])
-        .setOption("vAxis", { format: "#,##0" })
+        .setOption("legend", { position: "bottom", textStyle: { fontSize: 10 } })
+        .setOption("hAxis", { title: "部門", titleTextStyle: { fontSize: 11, bold: true } })
+        .setOption("vAxis", { title: "績效金額 (元)", titleTextStyle: { fontSize: 11, bold: true }, format: "#,##0" })
+        .setOption("series", {
+          0: { dataLabel: "value" },
+          1: { dataLabel: "value" }
+        })
         .build();
       sheet.insertChart(柱狀圖);
     }
@@ -73,6 +80,7 @@ function 建立營運Dashboard() {
         .setOption("width", 500).setOption("height", 350)
         .setOption("pieHole", 0.4)
         .setOption("colors", ["#1a73e8", "#34a853", "#fbbc04", "#ea4335", "#9c27b0"])
+        .setOption("legend", { position: "right", textStyle: { fontSize: 10 } })
         .setOption("pieSliceText", "percentage")
         .build();
       sheet.insertChart(圓餅圖);
@@ -91,6 +99,9 @@ function 建立營運Dashboard() {
         .setOption("width", 500).setOption("height", 350)
         .setOption("colors", ["#1a73e8", "#34a853"])
         .setOption("isStacked", true)
+        .setOption("legend", { position: "bottom", textStyle: { fontSize: 10 } })
+        .setOption("hAxis", { title: "月份", titleTextStyle: { fontSize: 11, bold: true } })
+        .setOption("vAxis", { title: "客戶數 (人)", titleTextStyle: { fontSize: 11, bold: true }, format: "#,##0" })
         .build();
       sheet.insertChart(面積圖);
     }

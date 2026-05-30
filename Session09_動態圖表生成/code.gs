@@ -162,6 +162,73 @@ function 建立折線圖() {
 }
 
 // ============================================================
+// 新增：建立組合圖表
+// ============================================================
+
+/**
+ * 建立月度營收、成本與利潤組合圖表
+ */
+function 建立組合圖表() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("月度趨勢");
+    if (!sheet) {
+      SpreadsheetApp.getUi().alert("❌ 請先執行「初始化圖表資料」");
+      return;
+    }
+
+    // 清除既有的組合圖表（避免重複）
+    var 舊圖表 = sheet.getCharts();
+    for (var i = 0; i < 舊圖表.length; i++) {
+      if (舊圖表[i].getOptions().get("title") === "2026 年月度營收、成本與利潤分析") {
+        sheet.removeChart(舊圖表[i]);
+      }
+    }
+
+    var 資料範圍 = sheet.getRange("A1:D13"); // 月份 + 營收 + 成本 + 利潤
+
+    var chart = sheet.newChart()
+      .setChartType(Charts.ChartType.COMBO)            // 組合圖表
+      .addRange(資料範圍)
+      .setPosition(15, 8, 0, 0)                        // 放於第 15 列，第 8 欄（H15），與折線圖並列
+      .setOption("title", "2026 年月度營收、成本與利潤分析")
+      .setOption("titleTextStyle", { fontSize: 16, bold: true, color: "#1a237e" })
+      .setOption("width", 800)
+      .setOption("height", 450)
+      .setOption("legend", { position: "bottom" })
+      .setOption("hAxis", {
+        title: "月份",
+        slantedText: true
+      })
+      .setOption("seriesType", "bars")                 // 預設全部系列為柱狀圖
+      .setOption("series", {
+        2: { 
+          type: "line", 
+          targetAxisIndex: 1, 
+          curveType: "function", 
+          pointSize: 6, 
+          lineWidth: 3 
+        } // 利潤（索引 2）為折線圖，並使用右側 Y 軸
+      })
+      .setOption("vAxes", {
+        0: { title: "金額 (NT$)", format: "#,##0" },    // 左側 Y 軸
+        1: { title: "利潤 (NT$)", format: "#,##0" }     // 右側 Y 軸
+      })
+      .setOption("colors", ["#1a73e8", "#fbbc04", "#ea4335"]) // 藍色（營收）、黃色（成本）、紅色（利潤）
+      .build();
+
+    sheet.insertChart(chart);
+
+    Logger.log("✅ 組合圖表已建立！");
+    SpreadsheetApp.getUi().alert("✅ 月度營收、成本與利潤組合圖表已生成！");
+
+  } catch (錯誤) {
+    Logger.log("❌ 錯誤：" + 錯誤.message);
+    SpreadsheetApp.getUi().alert("❌ 錯誤：" + 錯誤.message);
+  }
+}
+
+// ============================================================
 // 第三部分：建立圓餅圖
 // ============================================================
 
@@ -254,9 +321,10 @@ function 一鍵生成圖表() {
   建立柱狀圖();
   建立堆疊柱狀圖();
   建立折線圖();
+  建立組合圖表();
   建立圓餅圖();
 
-  SpreadsheetApp.getUi().alert("✅ 全部圖表已生成！\n包含：柱狀圖、堆疊圖、折線圖、圓餅圖");
+  SpreadsheetApp.getUi().alert("✅ 全部圖表已生成！\n包含：柱狀圖、堆疊圖、折線圖、組合圖、圓餅圖");
 }
 
 // ============================================================
@@ -323,6 +391,7 @@ function onOpen() {
     .addItem("📊 建立柱狀圖", "建立柱狀圖")
     .addItem("📊 建立堆疊柱狀圖", "建立堆疊柱狀圖")
     .addItem("📈 建立折線圖", "建立折線圖")
+    .addItem("📊📈 建立組合圖表", "建立組合圖表")
     .addItem("🥧 建立圓餅圖", "建立圓餅圖")
     .addSeparator()
     .addItem("🚀 一鍵生成全部圖表", "一鍵生成圖表")
